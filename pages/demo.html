@@ -73,7 +73,7 @@
             // .toString cuts off the variable declaration, so we add it back in for clarity
             content : '    let demoJS = ' + demoJS.toString(),
             onContentLoaded : function(content) { 
-                this.loadStyleSheet('css/vendor/prism.css');
+                this.loadStyleSheet('../css/vendor/prism.css');
             }
         });
         new codeView().attach(document.getElementById('demo-code'));
