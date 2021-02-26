@@ -1,0 +1,67 @@
+
+<!DOCTYPE html>
+<head>
+    <meta charset="UTF-8">
+    <link href='../css/site.css' rel='stylesheet' />
+
+    <link href='../css/vendor/prism.css' rel='stylesheet'/>
+    <script src='../scripts/vendor/prism.js'></script>
+
+</head>
+<body>
+    <div class='site-header'>
+        <a href='../index.html'>lite</a>
+    </div>
+    <div class='top-nav'>
+        <a href='./demo.html'>demo</a>
+        <a href='./code.html'>code</a>
+        <a href='./tests.html'>tests</a>
+    </div>
+    <div class='site-content'>
+        <p><h3>main code</h3></p>
+        <p>The main code sets up the binding logic and event hooks. </p>
+        <pre class='language-javascript'><code id='liteCode'></code></pre>
+
+        <p><h3>xhr</h3></p>
+        <p>XHR is a XMLHttpRequest utility included with the lite framework and 
+            used by it for loading content. Similar to jQuery's ajax, it converts a request into 
+            a promise-like thennable allowing for simplified syntax.</p>
+        <pre class='language-javascript'><code id='xhrCode'></code></pre>
+
+        <p><h3>router</h3></p>
+        <p>Router is a utility for attaching events to the window hash. The dev can supply a collection 
+            of paths and a onHashChange callback. 
+        </p>
+        <pre class='language-javascript'><code id='routerCode'></code></pre>
+
+        <div id='filler' style='height:200px'></div>
+    </div>
+</body>
+<script>
+
+    (()=>{
+        let fetchCode = function(filePath, onLoaded) {
+            fetch(filePath).then(response => {
+                response.text().then(text => onLoaded(text));
+            });
+        }
+
+        let raws = 'https://raw.githubusercontent.com/unstableconfiguration/Lite/master/';
+
+        fetchCode(raws + 'src/lite.js', (text) => {
+            document.getElementById('liteCode').innerHTML = 
+                Prism.highlight(text, Prism.languages.javascript, 'javascript');
+        });
+
+        fetchCode(raws + 'src/xhr.js', (text) => {
+            document.getElementById('xhrCode').innerHTML = 
+                Prism.highlight(text, Prism.languages.javascript, 'javascript');
+        });
+
+        fetchCode(raws + 'src/router.js', (text) => {
+            document.getElementById('routerCode').innerHTML = 
+                Prism.highlight(text, Prism.languages.javascript, 'javascript');
+        });
+
+    })();
+</script>

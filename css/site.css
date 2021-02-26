@@ -1,0 +1,75 @@
+
+
+.site-header {
+    background-color: #eee;
+    border-bottom: solid thin #ccc;
+    border-top: solid thin #ccc;
+    display:block;
+    font-family: Arial, Helvetica, sans-serif;
+    font-weight:bold;
+    font-size:2em;
+    padding: 1% 5% 1% 5%;
+}
+
+.site-header > a:link, a:visited{
+    border-bottom: solid thin black;
+    color:#333;
+    text-decoration:none;
+}
+
+.site-header > a:hover, a:active {
+    font-style:italic
+}
+
+.top-nav { 
+    background-color:#333;
+    color:#ccc;
+    font-family:Arial, Helvetica, sans-serif;
+    overflow:hidden;
+    padding-left:5%;
+}
+
+.top-nav a { 
+    float:left;
+    font-size:14pt;
+    padding:.5em;
+    text-decoration: none;
+    text-align: center;
+}
+
+.top-nav a:link, .top-nav a:visited {
+    color:#ccc;
+}
+
+.top-nav a:hover { 
+    background-color:#555;
+    text-decoration: underline;
+
+}
+
+.site-content { 
+    color:#555;
+    display:block;
+    font-family: Arial, Helvetica, sans-serif;
+    padding:3% 8% 3% 8%;
+}
+
+.site-content a:hover, a:active { 
+    font-style:italic
+}
+
+
+.site-content code {
+    display:block;
+    height: 200px;
+    /* Override prism default 1em*/
+    font-size:.8em !important;
+    overflow-x:hidden;
+    overflow-y:scroll;
+    resize:vertical;
+}
+
+.text-small {
+    font-size:small;
+}
+

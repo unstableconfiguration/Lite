@@ -1,0 +1,36 @@
+
+<!DOCTYPE html>
+<head>
+    <meta charset="UTF-8">
+    <link href='../css/site.css' rel='stylesheet' />
+
+    <link href='../css/vendor/mocha.css' rel='stylesheet'/>
+    <script src='../scripts/vendor/mocha.js'></script>
+    <script src='../scripts/vendor/chai.js' ></script>
+
+</head>
+<body>
+    <div class='site-header'>
+        <a href='../index.html'>lite</a>
+    </div>
+    <div class='top-nav'>
+        <a href='./demo.html'>demo</a>
+        <a href='./code.html'>code</a>
+        <a href='./tests.html'>tests</a>
+    </div>
+    <div class='site-content'>
+        <div id='mocha'></div>
+    </div>
+</body>
+<script>mocha.setup('bdd');</script>
+<script type='module'>
+    import { LiteTests, XHRTests, RouterTests } from '../tests/lite-tests.js';
+
+    LiteTests();
+    XHRTests();
+    RouterTests();
+    mocha.run();
+</script>
+
+
+

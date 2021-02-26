@@ -1,0 +1,118 @@
+
+<!DOCTYPE html>
+<head>
+    <meta charset="UTF-8">
+    <link href='../css/site.css' rel='stylesheet' />
+
+    <link rel='stylesheet' href='../css/vendor/prism.css'>
+    <script src='../scripts/vendor/prism.js'></script>
+
+    <script src='../scripts/vendor/marked.js'></script>
+
+</head>
+<body>
+    <div class='site-header'>
+        <a href='../index.html'>lite</a>
+    </div>
+    <div class='top-nav'>
+        <a href='./demo.html'>demo</a>
+        <a href='./code.html'>code</a>
+        <a href='./tests.html'>tests</a>
+    </div>
+    <div id='content' class='site-content'>
+        <div id='demo-text'></div>
+        <div>
+            <pre class='language-javascript'><code id='demo-code'></code></pre>
+        </div>
+
+        <div id='xhr-text'>
+            <p>lite.xhr is a XMLHttpRequest utility. It focuses on adding 
+                syntactic sugar to, but not obscuring the underlying XMLHttpRequest. In the below 
+                example, we create and send a XMLHttpRequest using a promise-like syntax. 
+            </p>
+        </div>
+        <div>
+            <pre class='language-javascript'><code id='xhr-code'></code></pre>
+        </div>
+
+        <div id='router-text'>
+            <p>lite.router is a utility for managing changes to the window.location.hash. The developer 
+                can add any number of path:value pairings where the path represents a url hash option. They 
+                can also add an onHashChange callback that will execute whenever the window.onhashchange 
+                event happens. If the url hash matches one of the path hashes, the paired path value will 
+                be passed to onHashChange. The paired value can be anything. For example it can be a function 
+                that executes, or a file location to be loaded.
+            </p>
+        </div>
+        <div>
+            <pre class='language-javascript'><code id='router-code'></code></pre>
+        </div>
+
+        <div id='spacer' style='height:250px;'></div>
+    </div>
+</body>
+
+<script type='module'>
+    import { lite } from '../scripts/lite.js';
+
+    (()=>{
+    let demoJS = function() {
+        let contentView = lite.extend({
+            contentUrl : 'demo.md',
+            onContentLoaded : function(content) { 
+                console.log('content loaded');
+                this.content = marked(content);
+            },
+            onContentBound : function(content) { 
+                console.log('content bound');
+            }
+        });
+        new contentView().attach(document.getElementById('demo-text'));
+        
+        let codeView = lite.extend({
+            // .toString cuts off the variable declaration, so we add it back in for clarity
+            content : '    let demoJS = ' + demoJS.toString(),
+            onContentLoaded : function(content) { 
+                this.loadStyleSheet('css/vendor/prism.css');
+            }
+        });
+        new codeView().attach(document.getElementById('demo-code'));
+    }
+
+    demoJS();
+    })();
+
+    (()=>{
+        let xhrCode = document.getElementById('xhr-code');
+        xhrCode.innerHTML = `   let request = lite.xhr.get('../site/demo.md')
+        .then(responseText => {
+            console.log(responseText);
+        })
+        .catch(error => { 
+            console.log('something went wrong');
+        });`
+    })();
+
+    (()=>{
+        let routerCode = document.getElementById('router-code');
+        routerCode.innerHTML = `   lite.router = new lite.Router() 
+        
+        lite.router.addPath({
+            hash : 'example/url/path', value :  'pathValue'
+        });
+
+        lite.router.onHashChange = function(hash, value, params) {
+            console.log(hash, value, params);
+            // hash: The url hash
+            // value: the route value that pairs with the url hash 
+            // params : URL search params converted to object
+                // so ?value1=1&value2=2 = { value1 : 1, value2 : 2 }
+        }`;
+
+        eval(routerCode.innerHTML);
+    })();
+
+    window.lite = lite;
+
+</script>
+
