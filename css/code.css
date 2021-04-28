@@ -1,0 +1,11 @@
+/* increase specificity */
+pre > code {
+    display:block;
+    height: 200px;
+    /* Override prism default 1em*/
+    font-size:1em !important;
+    overflow-x:hidden;
+    overflow-y:scroll;
+    resize:vertical;
+}
+

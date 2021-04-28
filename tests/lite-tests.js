@@ -109,17 +109,21 @@ let Router = function(options = {}) {
         });        
         let value = path ? path.value : null;
 
-        let search = /\?.+$/.exec(hash);
-        search = search ? search[0] : location.search;
-        let urlArgs = router.getSearchParams(search);
+        let searchParams = router.getSearchParams();
         
-        onHashChange(hash, value, urlArgs);
+        onHashChange(hash, value, searchParams);
     };
     router.onHashChange = options.onHashChange || onHashChange;
     
+    
 
-    router.getSearchParams = function(search) { 
-        if(!search) { return null; }
+    router.getSearchParams = function(search = location.search) { 
+        if(!search) {
+            search = /\?.+$/.exec(location.hash);
+            if(search) { search = search[0]; }
+        }
+        if(!search) { return; }
+        search = search.replace('&amp;', '&');
 
         let params = new URLSearchParams(search);
         
@@ -136,17 +140,30 @@ let Router = function(options = {}) {
     */
     router.addPath = function(path) {
         if(path.hash instanceof RegExp) { 
-            router.paths.push({ pattern : path.hash, value : path.value });
+            path.pattern = path.hash;
+            router.paths.push(path);
         }
         if(typeof(path.hash) !== 'string') { return; }
-        let pattern = router.getHashRegex(path.hash);
-        router.paths.push({ pattern : pattern, value : path.value });
+        path.pattern = router.getHashRegex(path.hash);
+        router.paths.push(path);
         return router.paths;
     };
 
-    router.getHashRegex = function(hash) { 
-        hash = hash.replace(/{.+}/, '.+');
-        hash = hash.replace('/', '\/');
+    const escapeSpecialChars = function(hash) {
+        ['(', ')']
+            .forEach(specialChar => {
+                hash = hash.replace(specialChar, '\\' + specialChar);
+            });
+        return hash;
+    };
+
+    const escapeWildCard = function(hash) { 
+        return hash.replace(/{.+}/, '.+');
+    };
+
+    router.getHashRegex = function(hash) {
+        hash = escapeWildCard(hash);
+        hash = escapeSpecialChars(hash);
         /* hash to match #location/hash
             with ?optional=true&parameters=1*/
         let pattern = new RegExp('^\#' + hash + '(\\?.*)?$');
@@ -189,28 +206,19 @@ let Lite = function(args={}){
     _lite.setContent = function(content) {
         _lite.content = content;
         _lite.onContentLoaded(_lite.content);
+        if(typeof(_lite.container) === 'string') {
+            _lite.container = document.getElementById(_lite.container);
+        }
         if(_lite.container) { 
             _lite._bindContent(_lite.content); 
-            _lite.__isContentBound = true;
         }
-        if(_lite.__isDataSet) { _lite.bindData(_lite.data); }
     };
 
-    /* setData
-        Explicitly kick off the data loading and binding process
-    */
-    _lite.setData = function(data) { 
-        _lite.data = data;
-        _lite.__isDataSet = true;
-        if(_lite.__isContentBound) { _lite.bindData(_lite.data); }
-    };
-   
     /* Attach
         Kicks off the view lifecycle of loading and binding. 
     */
     _lite.attach = function(container) {
         if(container) { _lite.container = container; }
-        if(_lite.data) { _lite.setData(_lite.data); }
         
         _lite._loadContent();
     };
@@ -232,16 +240,19 @@ let Lite = function(args={}){
                 _lite.container.removeChild(_lite.container.firstChild);
             _lite.container.insertAdjacentHTML('afterbegin', _lite.content);
             _lite.onContentBound(_lite.content);
+
+            if(_lite.data) { _lite.bindData(); }
         }
         else { throw(new Error(`no container or no content for template`)); }
     };
     
     _lite.bindData = function(data) {
+        data = data || _lite.data;
         _lite.container.querySelectorAll('[data-field]')
             .forEach((el)=>{
                 let prop = el.getAttribute('data-field') || el.id;
-                let val = prop.split('.').reduce((acc, p)=>{ return acc[p]; }, data);
-                if(typeof(el.value) !== 'undefined') el.value = val;
+                let val = prop.split('.').reduce((acc, p) => { return acc[p]; }, data);
+                if(typeof(el.value) !== 'undefined') { el.value = val; }
                 else el.innerHTML = val;
             });
 
@@ -353,18 +364,6 @@ let LiteTests = function() {
                 assert(view.content == 3);
                 done();
             });
-
-            it('should call bindData after setData is called and content is bound', function(done) { 
-                let view = lite.extend({
-                    content : '<div data-field="test"></div>',
-                    bindData : function(data) { assert(data == 1); this.data = 2; }
-                });
-                view = new view();
-                view.attach(document.createElement('div'));
-                view.setData(1);
-                assert(view.data == 2);
-                done();
-            });
         });
 
         describe('Content loading and binding', function() { 
@@ -393,24 +392,75 @@ let LiteTests = function() {
                 view.attach();
             });
 
-        });
+            it('should getElementById if container is an id string', function(done) {
+                let div = document.createElement('div');
+                div.id = 'container-attach-test';
+                div.style.display = 'none';
+                document.body.appendChild(div);
 
-        describe('Data binding', function() { 
-            it('should bind data using the data-field attribute', function(done) { 
                 let view = lite.extend({
-                    contentUrl : '../tests/lite-test/lite-test.html',
-                    data : { testField : 'testing' },
-                    container : document.createElement('div'),
-                    onDataBound : function(data) {
-                        assert(data.testField == 'testing');
-                        let span = this.container.firstChild.firstElementChild;
-                        assert(span.innerHTML == 'testing');
+                    container: 'container-attach-test',
+                    content : 'test',
+                    onContentBound : function() { 
+                        assert(document.getElementById('container-attach-test').innerHTML == 'test');
                         done();
                     }
                 });
-                view = new view();
-                view.attach();
+                new view().attach();
             });
+        });
+
+        describe('Data binding', function() { 
+            // data binding: 
+                // should match on data-field
+                // should work recursively if dot-notation is used 
+                // should match on id if data field is empty
+
+            it('bind data value to element if data-field matches property name', function(done){
+                let view = lite.extend({
+                    content : '<span data-field="bindTest"></span>',
+                    data : { bindTest : 'testing' },
+                    onDataBound : function() { 
+                        assert(this.container.firstChild.innerHTML == 'testing');
+                        done();
+                    }
+                });
+                new view().attach(document.createElement('div'));
+            });
+
+            it('should bind data value to element if data-field is empty and id matches property name', function(done) {
+                let view = lite.extend({
+                    content : '<span data-field id="bindTest"></span>',
+                    data : { bindTest : 'testing' },
+                    onDataBound : function() { 
+                        assert(this.container.firstChild.innerHTML == 'testing');
+                        done();
+                    }
+                });
+                new view().attach(document.createElement('div'));
+            });
+
+            it('should find nested data if data-field uses dot-notation', function(done) { 
+                let view = lite.extend({
+                    content : '<span data-field="outer.inner"></span>',
+                    data : { outer : { inner : 'testing' } },
+                    onDataBound : function() { 
+                        assert(this.container.firstChild.innerHTML == 'testing');
+                        done();
+                    }
+                });
+                new view().attach(document.createElement('div'));
+            });
+
+            it('should call .onDataBound() after .bindData()', function(done) {
+                let view = lite.extend({
+                    content : '<span></span>',
+                    onContentBound : function() { this.bindData({ data : 1 }); },
+                    onDataBound : function() { done(); }
+                });
+                new view().attach(document.createElement('div'));
+            });
+
         });
 
         describe('Script and Stylesheet loading', function() {
@@ -458,49 +508,77 @@ let LiteTests = function() {
 let RouterTests = function() {
     let assert = chai.assert;
     describe('Router Tests', function() { 
-        it('should trigger custom onHashChange event when window hash changes', function(done) { 
-            return done();
-        });
 
-        it('should return path value if location hash matches path pattern', function(done) { 
-            new Router({
-                onHashChange : function(hash, value) {
-                    value();
-                },
-                paths : [
-                    { 
-                        hash : 'test/path', 
-                        value : function() { 
-                            done();
-                            window.onhashchange = null;
-                            window.location.hash = '';
-                        } 
+        describe('onHashChange tests', function() {
+            it('should trigger custom onHashChange event when window hash changes', function(done) { 
+                new Router({
+                    onHashChange : function() { 
+                        done(); 
+                        window.onhashchange = null;
                     }
-                ]
+                });
+                window.onhashchange();
             });
-            window.location.hash = 'test/path';
-            window.onhashchange();
+
+            it('should return path.value if a path.pattern matches location.hash', function(done) { 
+                new Router({
+                    onHashChange : function(path, value) {
+                        value();
+                    },
+                    paths : [
+                        { 
+                            hash : 'test/path', 
+                            value : function() { 
+                                done();
+                                window.onhashchange = null;
+                                window.location.hash = '';
+                            } 
+                        }
+                    ]
+                });
+                window.location.hash = 'test/path';
+                window.onhashchange();
+            });
+        });
+        
+
+        describe('path.hash parsing / pattern matching tests', function() {
+            it('should escape special characters', function() { 
+                let router = new Router(); 
+                window.onhashchange = null;
+                let pattern = router.getHashRegex('testing()');
+                assert(pattern.test('#testing()'));
+            });
+            
+            it('should convert a path string to a regex when getHashRegex is called', function() {
+                let router = new Router();
+                window.onhashchange = null;
+                let pattern = router.getHashRegex('test/path');
+                assert(pattern.test('#test/path'));
+            });
+
+            it('should allow for path wildcards when {braces} are used in the path', function() {
+                let router = new Router();
+                window.onhashchange = null;
+                let pattern = router.getHashRegex('test/path/{id}');
+                assert(pattern.test('#test/path/wildcard'));
+            });
         });
 
-        it('should parse url parameters into object when getSearchParams is called', function() { 
-            let router = new Router();
-            window.onhashchange = null;
-            let parsed = router.getSearchParams("?key1=val1&key2=val2");
-            assert(parsed.key1 == "val1");
-        });
-
-        it('should convert a path string to a regex when getHashRegex is called', function() {
-            let router = new Router();
-            window.onhashchange = null;
-            let pattern = router.getHashRegex('test/path');
-            assert(pattern.test('#test/path'));
-        });
-
-        it('should allow for path wildcards when {braces} are used in the path', function() {
-            let router = new Router();
-            window.onhashchange = null;
-            let pattern = router.getHashRegex('test/path/{id}');
-            assert(pattern.test('#test/path/wildcard'));
+        describe('URLSearchParameter parsing tests', function() { 
+            it('should parse url parameters into object when getSearchParams is called', function() { 
+                let router = new Router();
+                window.onhashchange = null;
+                let parsed = router.getSearchParams("?key1=val1&key2=val2");
+                assert(parsed.key1 == "val1");
+            });
+    
+            it('should convert "amp;" to "&" when location.hash is used', function() { 
+                let router = new Router();
+                window.onhashchange = null;
+                let parsed = router.getSearchParams("?key1=val1&amp;key2=val2");
+                assert(parsed.key2 == 'val2');
+            });
         });
 
     });
@@ -551,6 +629,12 @@ let XHRTests = function() {
             it('should send when .then() is called', function(done) {
                 xhr.init('../tests/xhr-test/xhr-test.txt')
                     .then(r => { done(); });
+            });
+
+            it('should throw an error when .then() fails', function(done) {
+                xhr.get('./fail.txt')
+                    .then(r => { assert(false); })
+                    .error(e => { done(); });
             });
 
         });
