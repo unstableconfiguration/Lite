@@ -634,7 +634,9 @@ let XHRTests = function() {
             it('should throw an error when .then() fails', function(done) {
                 xhr.get('./fail.txt')
                     .then(r => { assert(false); })
-                    .error(e => { done(); });
+                    .error(e => { 
+                        e.preventDefault();
+                        done(); });
             });
 
         });
