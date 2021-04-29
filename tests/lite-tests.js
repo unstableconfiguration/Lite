@@ -632,11 +632,13 @@ let XHRTests = function() {
             });
 
             it('should throw an error when .then() fails', function(done) {
+                window.xhr = xhr;
                 xhr.get('./fail.txt')
-                    .then(r => { })
+                    .then(r => { console.log('eh'); })
                     .error(e => { 
-                        e.preventDefault();
-                        done(); });
+                        
+                        done(); 
+                    });
             });
 
         });
