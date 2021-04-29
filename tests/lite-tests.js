@@ -633,10 +633,9 @@ let XHRTests = function() {
 
             it('should throw an error when .then() fails', function(done) {
                 window.xhr = xhr;
-                xhr.get('./fail.txt')
-                    .then(r => { console.log('eh'); })
+                xhr.get('https://fail.txt', { timeout : 50 })
+                    .then(r => { })
                     .error(e => { 
-                        
                         done(); 
                     });
             });
